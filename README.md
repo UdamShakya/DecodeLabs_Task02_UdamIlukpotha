@@ -7,87 +7,130 @@
 
 ## 📥 Dataset Download
 
-**Dataset:** Credit Card Fraud Detection (Real-world data by ULB Machine Learning Group)
+**Dataset:** Credit Card Fraud Detection (ULB Machine Learning Group)
 
 👉 **Download here:** https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
 
-**Steps to download:**
+**Steps:**
 1. Create a free account at [kaggle.com](https://www.kaggle.com)
-2. Visit the link above
-3. Click the **Download** button → you'll get `creditcard.csv` (~144MB)
-4. Place `creditcard.csv` in the **same folder** as your notebook
-
-
+2. Visit the link above and click **Download** → `creditcard.csv` (~144MB)
+3. Place `creditcard.csv` in the **same folder** as your notebook
 
 ***
 
 ## Project Overview
 
-This project is **Project 2** of the DecodeLabs Data Science Industrial Training Kit (Batch 2026). The objective is to build a **production-grade, leak-free supervised learning pipeline** that detects fraudulent credit card transactions in a highly imbalanced dataset — mirroring real challenges faced by data scientists at financial institutions.
+This project is **Project 2** of the DecodeLabs Data Science Industrial Training Kit (Batch 2026). The objective is to build a production-grade, leak-free supervised learning pipeline to detect fraudulent credit card transactions in a highly imbalanced real-world dataset.
 
-**Real Dataset Stats:**
+**Dataset Stats:**
 - **284,807** total transactions
-- **492** fraud cases (**0.172%** of total) — extreme imbalance
-- **28** PCA-transformed features (V1–V28) + `Amount` + `Time`
-- Source: European cardholders, transactions over 2 days in September 2013
+- **492** confirmed fraud cases (**0.17%** of total)
+- **28** PCA-transformed features (V1–V28) + `Amount`
+- Source: European cardholders, September 2013
 
 ***
 
-## The Core Problem: Class Imbalance
+## Class Distribution
 
-A model that predicts "Legitimate" for every transaction achieves **99.83% accuracy** — while catching **zero fraud**. This project teaches you to discard Accuracy entirely and use metrics that actually matter.
+| Class | Count | Percentage |
+|-------|-------|------------|
+| Legitimate (0) | 284,315 | 99.83% |
+| Fraud (1) | 492 | 0.17% |
+
+The extreme imbalance (578:1 ratio) is why standard Accuracy is a useless metric for this problem.
+
+![Class Distribution](output3.png)
+
 
 ***
 
-## Evaluation Metrics Used
+## Evaluation Metrics
 
 | Metric | Formula | Why It Matters |
 |--------|---------|---------------|
-| **Precision** | TP ÷ (TP + FP) | When we flag fraud, are we right? Reduces false declines |
-| **Recall** | TP ÷ (TP + FN) | Did we catch ALL real fraud? Missed fraud = direct loss |
-| **F1-Score** | 2 × (P × R) ÷ (P + R) | Harmonic balance of Precision and Recall |
-| **ROC-AUC** | Area under ROC curve | Overall model separation power |
-| ~~Accuracy~~ | ~~Correct ÷ Total~~ | ~~Discarded — deeply misleading on imbalanced data~~ |
-
-**Recall is the primary metric** — a missed fraud (False Negative) causes real financial loss.
+| **Precision** | TP ÷ (TP + FP) | When we flag fraud, are we right? |
+| **Recall** | TP ÷ (TP + FN) | Did we catch ALL real fraud? |
+| **F1-Score** | 2 × (P × R) ÷ (P + R) | Harmonic balance of both |
+| **ROC-AUC** | Area under ROC curve | Overall separation power |
+| ~~Accuracy~~ | ~~Correct ÷ Total~~ | ~~Discarded — misleading on imbalanced data~~ |
 
 ***
 
-## Expected Real-World Scores (Kaggle Dataset)
+## Results
 
-| Model | Precision | Recall | F1-Score | ROC-AUC |
+### Logistic Regression
+
+| Class | Precision | Recall | F1-Score | Support |
 |-------|-----------|--------|----------|---------|
-| Logistic Regression | 0.85–0.92 | 0.60–0.75 | 0.70–0.82 | 0.92–0.96 |
-| Random Forest | 0.90–0.96 | 0.78–0.88 | 0.84–0.92 | 0.96–0.99 |
+| Legitimate | 1.00 | 0.97 | 0.99 | 56,864 |
+| **Fraud** | **0.06** | **0.92** | **0.11** | **98** |
+| Accuracy | | | 0.97 | 56,962 |
+| Macro Avg | 0.53 | 0.95 | 0.55 | 56,962 |
 
-> ⚠️ If you see 1.0 (perfect scores) on ALL metrics, it means data leakage has occurred — SMOTE was likely applied before the train/test split.
+**Confusion Matrix:**
+- True Negatives (Correct Legitimate): **55,398**
+- True Positives (Fraud Caught): **90**
+- False Positives (False Alarms): **1,466**
+- False Negatives (Missed Fraud): **8**
+
+**ROC-AUC: 0.9706**
+
+**Analysis:** Logistic Regression achieves excellent Recall (0.92) — it catches 90 out of 98 fraud cases, missing only 8. However, Precision is very low (0.06) meaning it raises 1,466 false alarms. In a real bank, this would mean thousands of legitimate customers getting their cards declined daily. The SMOTE + class weighting successfully pushed the model to be aggressive about finding fraud.
 
 ***
 
-## SMOTE — Synthetic Minority Over-Sampling Technique
+### Random Forest
 
-SMOTE creates brand new synthetic fraud examples by interpolating between existing ones:
+| Class | Precision | Recall | F1-Score | Support |
+|-------|-----------|--------|----------|---------|
+| Legitimate | 1.00 | 1.00 | 1.00 | 56,864 |
+| **Fraud** | **0.43** | **0.84** | **0.57** | **98** |
+| Accuracy | | | 1.00 | 56,962 |
+| Macro Avg | 0.72 | 0.92 | 0.79 | 56,962 |
 
-```
-x_new = x_i + λ × (x_nn − x_i),   where λ ~ Uniform(0, 1)
-```
+**Confusion Matrix:**
+- True Negatives (Correct Legitimate): **56,757**
+- True Positives (Fraud Caught): **82**
+- False Positives (False Alarms): **107**
+- False Negatives (Missed Fraud): **16**
 
-| Approach | Problem |
-|----------|---------|
-| ❌ Undersampling | Destroys valuable legitimate transaction data |
-| ❌ Simple Oversampling | Just copies fraud rows → overfitting |
-| ✅ SMOTE | Creates genuinely new fraud examples → robust learning |
+**ROC-AUC: 0.9800**
 
-### ⚠️ The Data Leakage Rule
+**Analysis:** Random Forest achieves a much stronger balance. Precision jumps to 0.43 — dramatically reducing false alarms from 1,466 down to just 107. Recall is 0.84, catching 82 of 98 fraud cases. The F1-Score of 0.57 is significantly better than Logistic Regression's 0.11, reflecting a far more operationally viable model.
 
-**NEVER apply SMOTE before the Train/Test Split.**
+![Confusion Matrix](output2.png)
 
-```
-# CORRECT ORDER:
-1. Stratified 80/20 split
-2. SMOTE runs ONLY inside imblearn.pipeline.Pipeline (training fold only)
-3. Test set stays untouched — reflects real-world 0.172% imbalance
-```
+![ROC Curve](output.png)
+
+***
+
+## Model Comparison
+
+| Metric | Logistic Regression | Random Forest | Winner |
+|--------|--------------------|-|--------|
+| Precision (Fraud) | 0.06 | **0.43** | ✅ Random Forest |
+| Recall (Fraud) | **0.92** | 0.84 | ✅ Logistic Regression |
+| F1-Score (Fraud) | 0.11 | **0.57** | ✅ Random Forest |
+| ROC-AUC | 0.9706 | **0.9800** | ✅ Random Forest |
+| False Positives | 1,466 | **107** | ✅ Random Forest |
+| False Negatives | **8** | 16 | ✅ Logistic Regression |
+
+### 🏆 Recommended Model: Random Forest
+
+**Random Forest is the better production model** for this use case. Its ROC-AUC of 0.9800 reflects stronger overall separation capability. Critically, it generates only 107 false alarms vs 1,466 for Logistic Regression — a 93% reduction in customer friction. It misses 16 frauds vs 8 for LR, but this trade-off is operationally acceptable given the massive reduction in false positives.
+
+> **Key insight:** Logistic Regression has higher Recall but at the cost of flooding the fraud review team with 1,466 false alarms per test set. Random Forest strikes the right balance between catching fraud and not disrupting legitimate customers.
+
+***
+
+## ROC Curve Analysis
+
+Both models significantly outperform the random baseline (AUC = 0.50):
+
+- **Logistic Regression AUC: 0.9706** — strong, but the linear decision boundary limits performance on the complex fraud pattern space
+- **Random Forest AUC: 0.9800** — the non-linear ensemble boundary captures fraud patterns more precisely
+
+Both curves hug the top-left corner of the ROC space — indicating excellent separation capability across all decision thresholds.
 
 ***
 
@@ -95,117 +138,66 @@ x_new = x_i + λ × (x_nn − x_i),   where λ ~ Uniform(0, 1)
 
 ### Pipeline 1: Logistic Regression
 ```
-StandardScaler → SMOTE → LogisticRegression
+StandardScaler → SMOTE → LogisticRegression(class_weight='balanced')
 ```
-- StandardScaler is **mandatory** — LR uses gradient descent with L2 regularization; unscaled features distort the penalty
-- Hyperparameters tuned: `smote__k_neighbors` [1][2], `classifier__C` [0.01, 0.1, 1.0]
+- StandardScaler normalizes all features to mean=0, std=1 (mandatory for LR)
+- SMOTE synthesizes new fraud examples on training data only
+- `class_weight='balanced'` applies additional cost-sensitive learning
 
 ### Pipeline 2: Random Forest
 ```
 SMOTE → RandomForestClassifier
 ```
-- **No StandardScaler** — tree splits are ordinal and scale-invariant
-- Hyperparameters tuned: `smote__k_neighbors` [1][2], `classifier__max_depth` [10, 20, None]
+- No StandardScaler needed — tree splits are ordinal and scale-invariant
+- SMOTE safely confined within the imblearn pipeline
 
 ***
 
-## Why imblearn.pipeline.Pipeline (Not sklearn)
+## Zero-Leakage Protocol (Verified)
 
-`sklearn.pipeline.Pipeline` breaks with SMOTE — its `transform()` only modifies `X`.
-SMOTE needs to modify **both `X` and `y`** simultaneously via `fit_resample()`.
-`imblearn.pipeline.Pipeline` natively supports this and isolates SMOTE inside every CV fold.
-
-***
-
-## Known Error & Fix
-
-### ValueError: Feature names must be in the same order as they were in fit
-
-This happens when using the real Kaggle dataset because it has a `Time` column the synthetic dataset didn't have.
-
-**Fix — update Step 3 in the notebook:**
-```python
-# Drop Time and log-transform Amount
-X = df.drop(columns=['Class', 'Time'])
-X['Amount'] = np.log1p(X['Amount'])
-
-# After train/test split, enforce column order consistency
-X_test = X_test[X_train.columns]   # ← This line fixes the ValueError
-```
-
-***
-
-## Zero-Leakage Protocol (Completed)
-
-1. ✅ Accuracy discarded — Precision, Recall, F1, ROC-AUC used
+1. ✅ Accuracy discarded — Precision, Recall, F1, ROC-AUC used exclusively
 2. ✅ Stratified 80/20 split performed BEFORE any SMOTE or Scaling
 3. ✅ SMOTE applied ONLY inside `imblearn.pipeline.Pipeline`
-4. ✅ `StandardScaler` inside LR pipeline — never fit on full dataset
-5. ✅ `GridSearchCV` with `StratifiedKFold(5)` — no leakage during tuning
-6. ✅ Test set reflects real-world 0.172% imbalance — untouched throughout
-7. ✅ Two models trained and compared on the same held-out test set
-
-***
-
-## Notebook Structure
-
-**File:** `Project2_FraudDetection_Pipeline.ipynb`
-
-| Step | Content |
-|------|---------|
-| Step 0 | Imports — `sklearn` + `imblearn` |
-| Step 1 | Data loading + class imbalance visualization |
-| Step 2 | Accuracy trap demonstration |
-| Step 3 | Feature prep — drop `Time`, log-transform `Amount` |
-| Step 4 | Stratified 80/20 split + `X_test = X_test[X_train.columns]` |
-| Step 5 | Logistic Regression `imblearn` pipeline |
-| Step 6 | Random Forest `imblearn` pipeline |
-| Step 7 | `GridSearchCV` hyperparameter tuning |
-| Step 8 | Confusion matrices + classification reports |
-| Step 9 | ROC curve comparison |
-| Step 10 | Final model selection + Zero-Leakage summary |
+4. ✅ `StandardScaler` fit inside LR pipeline — never on full dataset
+5. ✅ `GridSearchCV` with `StratifiedKFold(5)` — zero leakage during tuning
+6. ✅ Test set reflects real-world 0.17% imbalance — untouched throughout
+7. ✅ Evaluated on 56,962 real unseen transactions
 
 ***
 
 ## Setup & Installation
 
 ```bash
-# Create virtual environment
+# Create and activate virtual environment
 python -m venv .venv
-
-# Activate (Windows)
-.venv\Scripts\activate
-
-# Activate (Mac/Linux)
-source .venv/bin/activate
+.venv\Scripts\activate          # Windows
+source .venv/bin/activate         # Mac/Linux
 
 # Install dependencies
 pip install pandas numpy scikit-learn imbalanced-learn matplotlib seaborn
 ```
 
-> `imbalanced-learn` is required for `imblearn.pipeline.Pipeline` and `SMOTE`.
-> Without it the notebook will fail at import.
+***
+
+## Project Files
+
+| File | Description |
+|------|-------------|
+| `Project2_FraudDetection_Pipeline.ipynb` | Full notebook with all 10 pipeline steps |
+| `creditcard.csv` | Real Kaggle dataset (download separately) |
+| `Project2_README.md` | This file |
 
 ***
 
 ## Skills Demonstrated
 
-- `imblearn.pipeline.Pipeline` — production-safe pipeline with SMOTE
+- `imblearn.pipeline.Pipeline` — production-safe resampling pipeline
 - `imblearn.over_sampling.SMOTE` — synthetic minority oversampling
 - `sklearn.linear_model.LogisticRegression` — linear classification
-- `sklearn.ensemble.RandomForestClassifier` — ensemble tree classification
-- `sklearn.model_selection.GridSearchCV` — hyperparameter tuning
-- `sklearn.model_selection.StratifiedKFold` — stratified cross-validation
+- `sklearn.ensemble.RandomForestClassifier` — ensemble classification
+- `sklearn.model_selection.GridSearchCV` + `StratifiedKFold` — safe tuning
 - `sklearn.metrics` — Precision, Recall, F1, ROC-AUC, confusion matrix
-- `matplotlib` + `seaborn` — ROC curves, heatmaps
-
-***
-
-## Tools & Environment
-
-- **Language:** Python 3.14
-- **IDE:** VS Code with Jupyter extension
-- **Environment:** Virtual environment (`.venv`)
+- `matplotlib` + `seaborn` — ROC curves, confusion matrix heatmaps
 
 ***
 
